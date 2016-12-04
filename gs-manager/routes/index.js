@@ -106,3 +106,62 @@ router.get('/googleiab/token/redirect', function (req, res) {
         res.send(tokenStorage);
     });
 });
+
+
+// 영수증 체크 
+router.post('/googleiab/receipt/validation', function(req, res) {
+    //req.body.RawReceipt //JSON format Receipt
+    
+
+    // POST /googleiab/receipt/validation패스로 검증을 요청할 때 body에 반드시 RawReceipt key로 json형태의 영수증을 첨부해야한다. 아니라면 에러를 전송한다.
+    if(req.body.RawReceipt === null || req.body.RawReceipt === undefined) {
+        res.send({result:false});
+        return;
+    }
+    
+    let parseRawRecipt = JSON.parse(req.body.RawReceipt);
+    let packageName = parseRawRecipt.packageName;
+    let productId = parseRawRecipt.productId;
+    let token = parseRawRecipt.purchaseToken;
+    
+    // 영수증을 검증하는 부분입니다. 구글 API에 영수증 정보를 전송하여 purchaseState가 0인 경우 정상 영수증으로 판단한다.
+    function ValidationIAB() {
+        return new Promise(function(resolve, reject) {
+            let getUrl = `https://www.googleapis.com/androidpublisher/v2/applications/${packageName}/purchases/products/${productId}/tokens/${token}?access_token=${tokenStorage.access_token}`;
+
+            request.get(getUrl, function (error, response, body) {
+        
+                let parseBody = JSON.parse(body);
+                if (!(parseBody.error === null || parseBody.error === undefined)) {
+                    reject(false);
+                }
+                else if(parseBody.purchaseState === 0) {
+                    resolve(true);
+                }
+                else {
+                    reject(false);
+                }
+            });
+        });   
+    }
+    
+    ValidationIAB()
+    .catch(function() {
+        return new Promise(function(resolve, reject) {
+            resolve(false);
+        });
+    })
+    .then(function(code) {
+        res.send({result:code});
+    });
+});
+
+
+
+router.get('/leaderboard/list', function(req, res) {
+
+	// TODO : something...
+
+});
+
+
